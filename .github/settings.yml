@@ -1,0 +1,4 @@
+_extends: .github:settings.yml
+repository:
+  name: apiproxy
+  description: API routing and authentication service

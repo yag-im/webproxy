@@ -1,0 +1,67 @@
+# do not rename this file as there is another default.conf in Docker image with localhost interferring with this one
+server {
+    listen      80;
+    listen      [::]:80;
+    server_name ${SERVER_NAME};
+
+    # security
+    include     nginxconfig.io/security.conf;
+
+    # logging
+    access_log  /dev/stdout json_combined;
+    error_log   stderr warn;
+
+    # public api endpoints
+    location ~ ^/api/(docs|specs|apps) {      
+        proxy_pass            ${YAGSVC_URL};
+        proxy_set_header Host $proxy_host;
+        include               nginxconfig.io/proxy.conf;
+    }
+
+    location /api {        
+        proxy_pass            ${YAGSVC_URL};
+        proxy_set_header Host $proxy_host;
+        include               nginxconfig.io/proxy.conf;
+        include               nginxconfig.io/auth.conf;
+    }
+
+    # signaling server websocket connection
+    location /webrtc {                
+        proxy_pass            ${SIGSVC_URL};
+        proxy_set_header Host $proxy_host;
+        include               nginxconfig.io/proxy.conf;
+        include               nginxconfig.io/auth.conf;
+    }
+
+    # authenticate user; set X-UID header upon successful authentication
+    # see nginxconfig.io/auth.conf
+    location = /auth/user {
+        proxy_pass                      ${AUTHSVC_URL};
+        proxy_pass_request_body         off;
+        proxy_set_header Content-Length "";
+        proxy_set_header X-Original-URI $request_uri;
+    }
+
+    location = /auth/logout {
+        proxy_pass            ${AUTHSVC_URL};
+        proxy_set_header Host $proxy_host;
+        include               nginxconfig.io/proxy.conf;
+        include               nginxconfig.io/auth.conf;
+    }
+
+    # OAuth endpoints (e.g. /auth/login/google?next_url=http://localhost:8080/)
+    location /auth {
+        proxy_pass            ${AUTHSVC_URL};
+        proxy_set_header Host $proxy_host;
+        include               nginxconfig.io/proxy.conf;
+    }
+
+    location / {
+        proxy_pass            ${WEBAPP_URL};
+        proxy_set_header Host $proxy_host;
+        include               nginxconfig.io/proxy.conf;
+    }
+
+    # additional config
+    include nginxconfig.io/general.conf;
+}
