@@ -1,7 +1,7 @@
 ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 SHELL := /bin/bash
 
-APP_NAME := yag-api-proxy
+APP_NAME := yag-webproxy
 DOCKER_IMAGE_TAG := $(APP_NAME):dev
 LISTEN_PORT := 8080
 
@@ -15,7 +15,7 @@ run: ## Run docker image
 		--name $(APP_NAME) \
 		-p $(LISTEN_PORT):80/tcp \
 		--add-host=webapp.yag.dc:172.17.0.1 \
-		--add-host=yagsvc.yag.dc:172.17.0.1 \
+		--add-host=webapi.yag.dc:172.17.0.1 \
 		--add-host=sigsvc.yag.dc:172.17.0.1 \
 		--env-file .env \
 		$(DOCKER_IMAGE_TAG)
