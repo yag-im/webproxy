@@ -1,4 +1,6 @@
-# do not rename this file as there is another default.conf in Docker image with localhost interferring with this one
+# Avoid renaming this file because the Docker image contains another "default.conf" configured with localhost, 
+# which conflicts with this one. To resolve this, we must override the existing "default.conf".
+
 server {
     listen      80;
     listen      [::]:80;
@@ -11,54 +13,56 @@ server {
     access_log  /dev/stdout json_combined;
     error_log   stderr warn;
 
-    # public api endpoints
-    location ~ ^/api/(docs|specs|apps) {      
+    # public api endpoints (docs, apps catalog etc); no authentication required
+    location ~ ^/api/(docs|specs|apps) {
         proxy_pass            ${WEBAPI_URL};
-        proxy_set_header Host $proxy_host;
         include               nginxconfig.io/proxy.conf;
     }
 
-    location /api {        
+    # protected api endpoints (user profile access etc)
+    location /api {
         proxy_pass            ${WEBAPI_URL};
-        proxy_set_header Host $proxy_host;
         include               nginxconfig.io/proxy.conf;
-        include               nginxconfig.io/auth.conf;
+        include               nginxconfig.io/auth_user.conf;
     }
 
-    # signaling server websocket connection
+    # signaling server websocket connection (streamd facing)
+    location = /webrtc/streamd {
+        rewrite               ^/webrtc/streamd$ /webrtc break;
+        proxy_pass            ${SIGSVC_URL};
+        include               nginxconfig.io/proxy.conf;
+        include               nginxconfig.io/auth_app.conf;
+    }
+
+    # signaling server websocket connection (user facing)
     location /webrtc {                
         proxy_pass            ${SIGSVC_URL};
-        proxy_set_header Host $proxy_host;
         include               nginxconfig.io/proxy.conf;
-        include               nginxconfig.io/auth.conf;
+        include               nginxconfig.io/auth_user.conf;
     }
 
-    # authenticate user; set X-UID header upon successful authentication
-    # see nginxconfig.io/auth.conf
-    location = /auth/user {
-        proxy_pass                      ${WEBAPI_URL};
+    # handles auth verification policies (verify/user, verify/app etc)
+    location /auth/verify {
+        proxy_pass                      ${AUTHSVC_URL};
         proxy_pass_request_body         off;
         proxy_set_header Content-Length "";
         proxy_set_header X-Original-URI $request_uri;
     }
 
-    location = /auth/logout {
-        proxy_pass            ${WEBAPI_URL};
-        proxy_set_header Host $proxy_host;
-        include               nginxconfig.io/proxy.conf;
-        include               nginxconfig.io/auth.conf;
-    }
+    #location = /auth/logout {
+    #    proxy_pass            ${AUTHSVC_URL};
+    #    include               nginxconfig.io/proxy.conf;
+    #   include               nginxconfig.io/auth_user.conf;
+    #}
 
-    # OAuth endpoints (e.g. /auth/login/google?next_url=http://localhost:8080/)
+    # public OAuth endpoints (e.g. /auth/login/google?next_url=http://localhost:8080/)
     location /auth {
-        proxy_pass            ${WEBAPI_URL};
-        proxy_set_header Host $proxy_host;
+        proxy_pass            ${AUTHSVC_URL};
         include               nginxconfig.io/proxy.conf;
     }
 
     location / {
         proxy_pass            ${WEBAPP_URL};
-        proxy_set_header Host $proxy_host;
         include               nginxconfig.io/proxy.conf;
     }
 
