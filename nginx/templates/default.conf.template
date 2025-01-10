@@ -49,12 +49,6 @@ server {
         proxy_set_header X-Original-URI $request_uri;
     }
 
-    #location = /auth/logout {
-    #    proxy_pass            ${AUTHSVC_URL};
-    #    include               nginxconfig.io/proxy.conf;
-    #   include               nginxconfig.io/auth_user.conf;
-    #}
-
     # public OAuth endpoints (e.g. /auth/login/google?next_url=http://localhost:8080/)
     location /auth {
         proxy_pass            ${AUTHSVC_URL};
